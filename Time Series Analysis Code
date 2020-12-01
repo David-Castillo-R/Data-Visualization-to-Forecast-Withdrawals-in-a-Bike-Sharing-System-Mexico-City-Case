@@ -1,69 +1,6 @@
-# 1
-serie<-Retiro[[1]]
-#plot.ts(serie$Total_Arribo)
-plot.ts(diff(serie$Withdrawals))
-
-plot.ts(serie$Total_Arribo[-1]/serie$Total_Arribo[-235])
-plot.ts(log(serie$Total_Arribo[-1]/serie$Total_Arribo[-235]))
-
-#2
-serie2<-Retiro[[2]]
-#plot.ts(serie2$Total_Arribo)
-plot.ts(diff(serie2$Total_Arribo))
-
-#3
-serie3<-Arribo[[3]]
-#plot.ts(serie3$Total_Arribo)
-plot.ts(diff(serie3$Total_Arribo))
-
-#4
-serie4<-Arribo[[4]]
-#plot.ts(serie4$Total_Arribo)
-plot.ts(diff(serie4$Total_Arribo))
-
-#5
-serie5<-Retiro[[5]]
-#plot.ts(serie5$Total_Arribo)
-plot.ts(diff(serie5$Total_Arribo))
-
-#6
-serie6<-Arribo[[6]]
-#plot.ts(serie6$Total_Arribo)
-plot.ts(diff(serie6$Total_Arribo))
-
-#7
-serie7<-Arribo[[7]]
-#plot.ts(serie7$Total_Arribo)
-plot.ts(diff(serie7$Total_Arribo))
-
-#8
-serie8<-Arribo[[8]]
-#plot.ts(serie8$Total_Arribo)
-plot.ts(diff(serie8$Total_Arribo))
-
-#9
-serie9<-Arribo[[9]]
-#plot.ts(serie9$Total_Arribo)
-plot.ts(diff(serie9$Total_Arribo))
-
-#10
-serie10<-Arribo[[10]]
-#plot.ts(serie10$Total_Arribo)
-plot.ts(diff(serie10$Total_Arribo))
-
-#11
-serie11<-Retiro[[11]]
-#plot.ts(serie11$Total_Arribo)
-plot.ts(diff(serie11$Total_Arribo))
-
-#12
-serie12<-Arribo[[12]]
-#plot.ts(serie12$Total_Arribo)
-plot.ts(diff(serie12$Total_Arribo))
-
 ############################################################################################################################################
 ############################################################################################################################################
-############ Limpieza de la serie
+############ Time series cleanning
 
 length(serie$Withdrawals)
 pru<-serie$Withdrawals[-c(1:12,218:235)]
@@ -72,10 +9,6 @@ graf<-as.data.frame(cbind(Time=1:204,Withdrawals=diff(log(pru))))
 trans<-graf$Withdrawals%>%diff(lag=3)
 graf<-graf[-c(1,2,3),]
 graf$dif<-trans
-
-z<-c(1,9,2,8,3,7,4,6,5)
-diff(z,lag=3)
-
 
 grafaux<-graf%>%gather(Series,Total,dif,Withdrawals)
 
