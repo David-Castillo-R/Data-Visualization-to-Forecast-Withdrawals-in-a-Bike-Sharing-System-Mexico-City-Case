@@ -1,0 +1,447 @@
+# 1
+serie<-Retiro[[1]]
+#plot.ts(serie$Total_Arribo)
+plot.ts(diff(serie$Withdrawals))
+
+plot.ts(serie$Total_Arribo[-1]/serie$Total_Arribo[-235])
+plot.ts(log(serie$Total_Arribo[-1]/serie$Total_Arribo[-235]))
+
+#2
+serie2<-Retiro[[2]]
+#plot.ts(serie2$Total_Arribo)
+plot.ts(diff(serie2$Total_Arribo))
+
+#3
+serie3<-Arribo[[3]]
+#plot.ts(serie3$Total_Arribo)
+plot.ts(diff(serie3$Total_Arribo))
+
+#4
+serie4<-Arribo[[4]]
+#plot.ts(serie4$Total_Arribo)
+plot.ts(diff(serie4$Total_Arribo))
+
+#5
+serie5<-Retiro[[5]]
+#plot.ts(serie5$Total_Arribo)
+plot.ts(diff(serie5$Total_Arribo))
+
+#6
+serie6<-Arribo[[6]]
+#plot.ts(serie6$Total_Arribo)
+plot.ts(diff(serie6$Total_Arribo))
+
+#7
+serie7<-Arribo[[7]]
+#plot.ts(serie7$Total_Arribo)
+plot.ts(diff(serie7$Total_Arribo))
+
+#8
+serie8<-Arribo[[8]]
+#plot.ts(serie8$Total_Arribo)
+plot.ts(diff(serie8$Total_Arribo))
+
+#9
+serie9<-Arribo[[9]]
+#plot.ts(serie9$Total_Arribo)
+plot.ts(diff(serie9$Total_Arribo))
+
+#10
+serie10<-Arribo[[10]]
+#plot.ts(serie10$Total_Arribo)
+plot.ts(diff(serie10$Total_Arribo))
+
+#11
+serie11<-Retiro[[11]]
+#plot.ts(serie11$Total_Arribo)
+plot.ts(diff(serie11$Total_Arribo))
+
+#12
+serie12<-Arribo[[12]]
+#plot.ts(serie12$Total_Arribo)
+plot.ts(diff(serie12$Total_Arribo))
+
+############################################################################################################################################
+############################################################################################################################################
+############ Limpieza de la serie
+
+length(serie$Withdrawals)
+pru<-serie$Withdrawals[-c(1:12,218:235)]
+
+graf<-as.data.frame(cbind(Time=1:204,Withdrawals=diff(log(pru))))
+trans<-graf$Withdrawals%>%diff(lag=3)
+graf<-graf[-c(1,2,3),]
+graf$dif<-trans
+
+z<-c(1,9,2,8,3,7,4,6,5)
+diff(z,lag=3)
+
+
+grafaux<-graf%>%gather(Series,Total,dif,Withdrawals)
+
+p1<-ggplot(data=grafaux, aes(x=Time,y=Total,color = Series)) + geom_line()+theme(axis.text.x = element_text(angle = 90))+scale_x_discrete(limits=as.character(dicbien)[-c(1:13,218:235)],breaks=as.character(dicbien)[seq(19,220,by=6)])+labs(title="Aggregated withdrawals",x ="Time", y = " ")#-c(1:18,218:235) 
+#Nueva gr??fica
+ggplot(data=grafaux, aes(x=Time,y=Total,color = Series)) + geom_line()+theme(legend.position = c(0.915, 0.9),axis.text.x = element_text(size = 10,angle = 90),axis.text.y = element_text(size = 10))+scale_x_discrete(limits=as.character(dicbien[14:216]),breaks=as.character(dicbien)[lim])+labs(title=paste("Aggregated withdrawals"),x ="Time", y = " ")
+
+setwd("D:/proyecto_ecobici/paper_ecobico/grafs_dens")
+jpeg("comparison.jpg", width = 500, height = 400)
+grid.arrange(p1,nrow=1,ncol=1)
+dev.off()
+
+jpeg("correlogram.jpg", width = 500, height = 800)
+grid.arrange(acf(graf$Withdrawals%>%diff(lag=3),main=""),pacf(graf$Withdrawals%>%diff(lag=3),main=""),nrow=2,ncol=1)
+dev.off()
+
+par(mfrow=c(1,1)) 
+acf(graf$Withdrawals%>%diff(lag=3),main="")
+pacf(graf$Withdrawals%>%diff(lag=3),main="")
+
+############################################################################################################################################
+############################################################################################################################################
+############ Selecci??n de modelos
+m1<-auto.arima(log(pru))
+checkresiduals(m1)
+
+#Este parece funcionar.
+m2<-arima(log(pru),order=c(2,1,0),seasonal=list(order=c(3,0,0),period=3))
+checkresiduals(m2)
+
+#Este igual parece funcionar
+m3<-arima(log(pru),order=c(2,1,0),seasonal=list(order=c(3,1,0),period=3))
+checkresiduals(m3)
+qqnorm(m3$residuals,main = "")
+qqline(m3$residuals)
+shapiro.test(fit$residuals)
+
+#Este igual parece funcionar (parece que este ser?? el modelo ganador)
+fit<-arima(log(pru),order=c(1,1,0),seasonal=list(order=c(3,1,0),period=3))
+checkresiduals(fit)
+qqnorm(fit$residuals,main = "")
+qqline(fit$residuals)
+shapiro.test(fit$residuals)
+
+#Este igual parece funcionar, pero se ve mejor el anterior
+m5<-arima(log(pru),order=c(1,1,0),seasonal=list(order=c(3,0,0),period=3))
+checkresiduals(m5)
+
+#Este igual parece funcionar, pero se ve mejor el anterior
+m6<-arima(log(pru),order=c(1,1,0),seasonal=list(order=c(4,1,0),period=3))
+checkresiduals(m6)
+
+############################################################################################################################################
+############################################################################################################################################
+#fit<-arima(serie$Withdrawals%>%log(),order=c(1,2,1),seasonal=list(order=c(2,1,0),period=9))
+#checkresiduals(fit)
+#auto.arima(serie$Withdrawals%>%log())
+#summary(fit)
+#tsdiag(fit)
+#nobs(fit)
+
+
+############################################################################################################################################
+############################################################################################################################################
+#Gr??ficas de valores ajustados
+#January
+pred<-predict(fit,50)
+pred<-forecast(fit)
+
+#g<-autoplot(exp(pred$x),series="observed values")+autolayer(exp(fitted(fit)),9,series="fitted values")
+#g<-g+scale_x_discrete(limits=as.character(dicbien[-c(1:12,218:235)]),breaks=as.character(dicbien[seq(19,220,by=6)]))+theme(axis.text.x = element_text(angle = 90))
+#g<-g+ylab("")+ggtitle("Fitted Arima(1,1,0)(3,1,0)[3] to January 2018 Sample")
+#g<-g+scale_colour_manual("Series",values=c("darkred","black"))
+
+gf<-autoplot(exp(pred$x),series="observed values")+autolayer(exp(fitted(fit)),9,series="fitted values")
+gf<-gf+scale_x_discrete(limits=as.character(dicbien[13:228]),breaks=as.character(dicbien[seq(13,228,by=12)]))+theme(legend.position = c(0.937, 0.928),axis.text.x = element_text(size = 12,angle = 90),axis.text.y = element_text(size = 12))
+gf<-gf+ylab("")+ggtitle("Fitted Arima(1,1,0)(3,1,0)[3] to January 2018 Sample")
+gf<-gf+scale_colour_manual("Series",values=c("darkred","black"))
+
+
+
+#Febrary
+refit <- Arima(log(serie2$Withdrawals), model=fit)
+refit$fitted
+refit$x
+
+g1<-autoplot(ts(exp(refit$x)),series="observed values")+autolayer(exp(refit$fitted),9,series="fitted values")
+g1<-g1+scale_x_discrete(limits=as.character(dicbien),breaks=as.character(dicbien[seq(6,236,by=6)]))+theme(axis.text.x = element_text(angle = 90))
+g1<-g1+ylab("")+ggtitle("Fitted Arima(1,1,0)(3,1,0)[3] to February 2018 Sample")
+g1<-g1+scale_colour_manual("Series",values=c("darkred","black"))
+
+gf1<-autoplot(exp(pred$x),series="observed values")+autolayer(exp(fitted(fit)),9,series="fitted values")
+gf1<-gf1+scale_x_discrete(limits=as.character(dicbien[14:216]),breaks=as.character(dicbien[seq(13,216,by=12)]))+theme(legend.position = c(0.937, 0.928),axis.text.x = element_text(size = 10,angle = 90),axis.text.y = element_text(size = 10))
+gf1<-gf1+ylab("")+ggtitle("Fitted Arima(1,1,0)(3,1,0)[3] to February 2018 Sample")
+gf1<-gf1+scale_colour_manual("Series",values=c("darkred","black"))
+
+#May
+refit5 <- Arima(log(serie5$Withdrawals), model=fit)
+refit5$fitted
+refit5$x
+
+g5<-autoplot(ts(exp(refit5$x)),series="observed values")+autolayer(exp(refit5$fitted),9,series="fitted values")
+g5<-g5+scale_x_discrete(limits=as.character(dicbien),breaks=as.character(dicbien[seq(6,236,by=6)]))+theme(axis.text.x = element_text(angle = 90))
+g5<-g5+ylab("")+ggtitle("Fitted Arima(1,1,0)(3,1,0)[3] to May 2018 Sample")
+g5<-g5+scale_colour_manual("Series",values=c("darkred","black"))
+
+gf5<-autoplot(ts(exp(refit5$x)),series="observed values")+autolayer(exp(refit5$fitted),9,series="fitted values")
+gf5<-gf5+scale_x_discrete(limits=as.character(dicbien),breaks=as.character(dicbien[seq(1,235,by=12)]))+theme(legend.position = c(0.937, 0.928),axis.text.x = element_text(size = 12,angle = 90),axis.text.y = element_text(size = 12))
+gf5<-gf5+ylab("")+ggtitle("Fitted Arima(1,1,0)(3,1,0)[3] to May 2018 Sample")
+gf5<-gf5+scale_colour_manual("Series",values=c("darkred","black"))
+#November
+refit11 <- Arima(log(serie11$Withdrawals), model=fit)
+
+g11<-autoplot(ts(exp(refit$x)),series="observed values")+autolayer(exp(refit$fitted),9,series="fitted values")
+g11<-g11+scale_x_discrete(limits=as.character(dicbien),breaks=as.character(dicbien[seq(6,236,by=6)]))+theme(axis.text.x = element_text(angle = 90))
+g11<-g11+ylab("")+ggtitle("Fitted Arima(1,1,0)(3,1,0)[3] to November 2018 Sample")
+g11<-g11+scale_colour_manual("Series",values=c("darkred","black"))
+
+gf11<-autoplot(ts(exp(refit11$x)),series="observed values")+autolayer(exp(refit11$fitted),9,series="fitted values")
+gf11<-gf11+scale_x_discrete(limits=as.character(dicbien),breaks=as.character(dicbien[seq(1,235,by=12)]))+theme(legend.position = c(0.937, 0.928),axis.text.x = element_text(size = 12,angle = 90),axis.text.y = element_text(size = 12))
+gf11<-gf11+ylab("")+ggtitle("Fitted Arima(1,1,0)(3,1,0)[3] to November 2018 Sample")
+gf11<-gf11+scale_colour_manual("Series",values=c("darkred","black"))
+
+grid.arrange(gf,gf5,gf11 ,nrow = 3,ncol=1)
+
+setwd("D:/proyecto_ecobici/paper_ecobico/grafs_dens")
+
+jpeg("gfitted.jpg", width = 500, height = 1200)
+grid.arrange(g,g5,g11 ,nrow = 3,ncol=1)
+dev.off()
+
+##Prueba
+prueba1<-Arima(log(serie$Withdrawals[1:20]),model=fit)
+prueba2<-Arima(log(serie$Withdrawals[1:40]),model=fit)
+prueba3<-Arima(log(serie$Withdrawals[1:60]),model=fit)
+prueba4<-Arima(log(serie$Withdrawals[1:80]),model=fit)
+prueba5<-Arima(log(serie$Withdrawals[1:100]),model=fit)
+prueba6<-Arima(log(serie11$Withdrawals[1:110]),model=fit)
+f6<-forecast(prueba6,10)
+prueba7<-Arima(log(serie$Withdrawals[1:140]),model=fit)
+prueba8<-Arima(log(serie$Withdrawals[1:160]),model=fit)
+prueba9<-Arima(log(serie$Withdrawals[1:180]),model=fit)
+prueba10<-Arima(log(serie$Withdrawals[1:200]),model=fit)
+prueba11<-Arima(log(serie$Withdrawals[1:220]),model=fit)
+
+f1<-forecast(prueba1,10)
+f2<-forecast(prueba2,10)
+f3<-forecast(prueba3,10)
+f4<-forecast(prueba4,10)
+f5<-forecast(prueba5,10)
+f6<-forecast(prueba6,10)
+f7<-forecast(prueba7,10)
+f8<-forecast(prueba8,10)
+f9<-forecast(prueba9,10)
+f10<-forecast(prueba10,10)
+f11<-forecast(prueba11,10)
+
+#Experimento 1
+#f1$lower<-exp(f1$lower)
+#f1$upper<-exp(f1$upper)
+#f1$mean<-exp(f1$mean)
+#f1$x<-exp(f1$x)
+
+#autoplot(f1)+scale_fill_manual("IC",values=c("blue","blue"))+geom_line(aes(y=serie2$Total_Retiro[21:30],x=21:30,color="Observed"))+scale_colour_manual("Series",values=c("darkred","black"))
+
+##############################################################
+##############################################################
+#Gr??ficas intervalo de predicci??n
+D<-cbind(Hour=21:30,Predicted=exp(f1$mean),LIC85=exp(f1$lower[,1]),LIC95=exp(f1$lower[,2]),HIC85=exp(f1$upper[,1]),HIC95=exp(f1$upper[,2]))
+D<-as.data.frame(D)
+p<-ggplot(D)+geom_line(aes(x=Hour, y=Predicted,colour="Predicted"))+scale_colour_manual("Series",values="darkred")
+p<-p+geom_ribbon(aes(ymin=LIC85, ymax=HIC85,x=Hour,fill="85%"),alpha=0.5)+geom_ribbon(aes(ymin=LIC95, ymax=HIC95,x=Hour,fill="95%"),alpha=0.2)
+p<-p+scale_fill_manual("IC",values=c("green","blue"))
+
+p<-p+geom_line(aes(x=21:30,y=serie2$Withdrawals[21:30],colour="Observed"),linetype="dashed")+scale_colour_manual("Series",values=c("black","darkred"))
+p<-p+scale_x_discrete(limits=as.character(dicbien),breaks=as.character(dicbien[21:30]))
+p<-p+ ggtitle("02/01/2018") +ylab("Retreats")
+p
+##############################################################
+##############################################################
+graficador<-function(f,s){
+  D<-cbind(Hour=s,Predicted=exp(f$mean),LIC85=exp(f$lower[,1]),LIC95=exp(f$lower[,2]),HIC85=exp(f$upper[,1]),HIC95=exp(f$upper[,2]))
+  D<-as.data.frame(D)
+  p<-ggplot(D)+geom_line(aes(x=Hour, y=Predicted,colour="Predicted"))+scale_colour_manual("Series",values="darkred")
+  p<-p+geom_ribbon(aes(ymin=LIC85, ymax=HIC85,x=Hour,fill="85%"),alpha=0.6)+geom_ribbon(aes(ymin=LIC95, ymax=HIC95,x=Hour,fill="95%"),alpha=0.3)
+  p<-p+scale_fill_manual("IC",values=c("green","blue"))
+  p<-p+geom_line(aes(x=s,y=serie2$Withdrawals[s],colour="Observed"))+scale_colour_manual("Series",values=c("black","darkred"))
+  p<-p+scale_x_discrete(limits=as.character(dicbien),breaks=as.character(dicbien[s]))
+  p<-p+ ggtitle("Withdrawals January 2018") +ylab(" ")+theme(axis.text.x = element_text(angle = 90))
+  print(p)
+}
+#######################################################################################
+#######################################################################################
+graficador2<-function(f,s){
+  D<-cbind(Time=s,Predicted=exp(f$mean),LIC85=exp(f$lower[,1]),LIC95=exp(f$lower[,2]),HIC85=exp(f$upper[,1]),HIC95=exp(f$upper[,2]))
+  D<-as.data.frame(D)
+  p<-ggplot(D)+geom_line(aes(x=Time, y=Predicted,colour="Predicted"))+scale_colour_manual("Series",values="darkred")
+  p<-p+geom_ribbon(aes(ymin=LIC85, ymax=HIC85,x=Time,fill="85%"),alpha=0.6)+geom_ribbon(aes(ymin=LIC95, ymax=HIC95,x=Time,fill="95%"),alpha=0.3)
+  p<-p+scale_fill_manual("IC",values=c("green","blue"))
+  p<-p+geom_line(aes(x=s,y=serie2$Withdrawals[s],colour="Observed"))+scale_colour_manual("Series",values=c("black","darkred"))
+  p<-p+scale_x_discrete(limits=as.character(dicbien),breaks=as.character(dicbien[s]))
+  p<-p+ ggtitle("Withdrawals January 2018") +ylab(" ")+theme(axis.text.x = element_text(size = 12,angle = 90),axis.text.y = element_text(size = 12))
+  print(p)
+  #legend.direction = "horizontal",legend.position = c(0.11, 0.86),
+  }
+#######################################################################################
+#######################################################################################
+graficador2(f4,81:90)
+
+graficador(f1,21:30)
+graficador(f2,41:50) #Bien-November
+g1may<-graficador(f3,61:70)   #Bien jan #Bien may #Bien Nov
+
+graficador(f4,81:90)
+
+
+g1_v2jan<-graficador(f4,81:90)
+g1_v2jand<-graficador2(f4,81:90)
+
+g1_v22<-graficador(f4,81:90)
+g1_v22d<-graficador2(f4,81:90)#Mayo
+
+g1_v2nov<-graficador(f4,81:90)                                   #Se ve bien mayo     #Se ve bien Noviembre
+g1_v2novd<-graficador2(f4,81:90)                                   #Se ve bien mayo     #Se ve bien Noviembre
+
+g2nov<-graficador(f5,101:110) #Bien jan #Bien may #Bien Nov
+
+prueba6<-Arima(log(serie$Withdrawals[1:110]),model=fit)
+f6<-forecast(prueba6,10)
+
+g2_v2jan<-graficador(f6,111:120) #Bien Jan
+g2_v2may<-graficador(f6,111:120)
+g2_v2nov<-graficador(f6,111:120)
+
+g2_v2jan
+g2_v2may
+g2_v2nov
+
+g3nov<-graficador(f7,141:150) #Bien jan #Bien may
+graficador(f8,161:170)
+g4nov<-graficador(f9,181:190) #Bien jan #Bien may #Bien nov
+graficador(f10,201:210)
+graficador(f11,221:230)
+
+
+
+g1jan
+g1may
+g1nov
+g1_v2jan
+g1_v22
+g1_v2nov
+jpeg("pred1.jpg", width = 500, height = 1200)
+grid.arrange(g1_v2jan,g1_v22,g1_v2nov ,nrow = 3,ncol=1)
+dev.off()
+
+grid.arrange(g1_v2jand,g1_v22d,g1_v2novd,nrow = 3,ncol=1)
+
+g2_v2jand<-graficador2(f1,101:110)
+g2_v22d<-graficador2(f5,101:110)#Mayo
+g2_v2novd<-graficador2(f10,101:110)                                   #Se ve bien mayo     #Se ve bien Noviembre
+
+g2jan
+g2may
+g2nov
+jpeg("pred2.jpg", width = 500, height = 1200)
+grid.arrange(g2jan,g2may,g2nov ,nrow = 3,ncol=1)
+dev.off()
+
+g4jan
+g4may
+g4nov
+jpeg("pred3.jpg", width = 500, height = 1200)
+grid.arrange(g4jan,g4may,g4nov ,nrow = 3,ncol=1)
+dev.off()
+
+#Experimento 2
+f2$lower<-exp(f2$lower)
+f2$upper<-exp(f2$upper)
+f2$mean<-exp(f2$mean)
+f2$x<-exp(f2$x)
+autoplot(f2)+geom_line(aes(y=serie2$Total_Retiro[41:50],x=41:50,color="red"))
+graficador(f2,41:50)
+
+#Experimento 3
+f3$lower<-exp(f3$lower)
+f3$upper<-exp(f3$upper)
+f3$mean<-exp(f3$mean)
+f3$x<-exp(f3$x)
+autoplot(f3)+geom_line(aes(y=serie2$Total_Retiro[61:70],x=61:70,color="red"))
+graficador(f3,61:70)
+
+#Experimento 4
+f4$lower<-exp(f4$lower)
+f4$upper<-exp(f4$upper)
+f4$mean<-exp(f4$mean)
+f4$x<-exp(f4$x)
+autoplot(f4)+geom_line(aes(y=serie2$Total_Retiro[81:90],x=81:90,color="red"))
+graficador(f4,81:90)
+
+#Experimento 5
+f5$lower<-exp(f5$lower)
+f5$upper<-exp(f5$upper)
+f5$mean<-exp(f5$mean)
+f5$x<-exp(f5$x)
+autoplot(f5)+geom_line(aes(y=serie2$Total_Retiro[101:110],x=101:110,color="red"))
+graficador(f5,101:110)
+
+#Experimento 6
+f6$lower<-exp(f6$lower)
+f6$upper<-exp(f6$upper)
+f6$mean<-exp(f6$mean)
+f6$x<-exp(f6$x)
+autoplot(f6)+geom_line(aes(y=serie2$Total_Retiro[121:130],x=121:130,color="red"))
+graficador(f6,121:130)
+
+#Experimento 7
+f7$lower<-exp(f7$lower)
+f7$upper<-exp(f7$upper)
+f7$mean<-exp(f7$mean)
+f7$x<-exp(f7$x)
+autoplot(f7)+geom_line(aes(y=serie2$Total_Retiro[141:150],x=141:150,color="red"))
+graficador(f7,141:150)
+
+#Experimento 8
+f8$lower<-exp(f8$lower)
+f8$upper<-exp(f8$upper)
+f8$mean<-exp(f8$mean)
+f8$x<-exp(f8$x)
+autoplot(f8)+geom_line(aes(y=serie2$Total_Retiro[161:170],x=161:170,color="red"))
+graficador(f8,161:170)
+
+#Experimento 9
+f9$lower<-exp(f9$lower)
+f9$upper<-exp(f9$upper)
+f9$mean<-exp(f9$mean)
+f9$x<-exp(f9$x)
+autoplot(f9)+geom_line(aes(y=serie2$Total_Retiro[181:190],x=181:190,color="red"))
+graficador(f9,181:190)
+
+#Experimento 10
+f10$lower<-exp(f10$lower)
+f10$upper<-exp(f10$upper)
+f10$mean<-exp(f10$mean)
+f10$x<-exp(f10$x)
+autoplot(f10)+geom_line(aes(y=serie2$Total_Retiro[201:210],x=201:210,color="red"))
+graficador(f10,201:210)
+
+#Experimento 11
+f11$lower<-exp(f11$lower)
+f11$upper<-exp(f11$upper)
+f11$mean<-exp(f11$mean)
+f11$x<-exp(f11$x)
+autoplot(f11)+geom_line(aes(y=serie2$Total_Retiro[221:230],x=221:230,color="red"))
+graficador(f11,221:230)
+
+
+# You could compute performance using this and compare it to
+# the test set. You can do that by passing a test set of the
+# same size as the forecast to `x` in accuracy()
+y<-serie2%>%log()
+
+plot.ts(exp(pred$x))
+plot.ts(exp(pred$fitted))
+plot.ts(serie$Total_Retiro%>%log())
+
+autoplot(exp(pred$fitted))
+fit1<-arima(serie$Total_Retiro,order=c(2,1,0),seasonal=list(order=c(2,1,0),period=9))
+serie$Total_Retiro%>%arima(order=c(1,1,0),seasonal=list(order=c(2,1,0),period=9))%>%forecast()%>%autoplot()
