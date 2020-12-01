@@ -1,0 +1,98 @@
+library(data.table)
+library(tidyverse)
+library(gridExtra)
+
+#Set work directory
+setwd("D:/proyecto_ecobici/ecobici/datos")
+
+
+#Files to read
+archivos<-c("2018-01.csv","2018-02.csv","2018-03.csv","2018-04.csv","2018-05.csv","2018-06.csv","2018-07.csv","2018-08.csv"
+            ,"2018-09.csv","2018-10.csv","2018-11.csv","2018-12.csv")
+
+dichrs<-as.ITime(seq(60*60*5+150,1470*60+150,by=300))
+dicbien<-as.ITime(seq(60*60*5,1470*60,by=300))
+lim<-seq(1,length(dicbien),by=12)
+#meses<-c("Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre")
+meses<-c("Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre")
+#Con esta funciÃ³n podemos clasificar de acuerdo al intervalo de tiempo en el que ocurre cada observaciÃ³n.
+comparar<-function(x){
+  which.min(abs(x-dichrs))
+}
+
+#Repositorios
+Arribo<-list()
+Retiro<-list()
+Total<-list()
+graficas<-list()
+k<-1
+#Ciclando el cÃ³digo.
+#
+
+for( i in c(3,7,10)){
+  # i<-10
+  #setwd("D:/proyecto_ecobici/ecobici/datos")
+  datos<-read.csv(archivos[i],header=TRUE,stringsAsFactors = FALSE)
+  
+  #Parece que sirve para ambos formatos de fecha.
+  #Convertimos las variables Fecha_Retiro y Fecha Arribo en variables de tipo fecha.
+  datos$Fecha_Retiro<-as.Date(datos$Fecha_Retiro,tryFormats = c("%d/%m/%Y","%d-%m-%Y","%Y-%m-%d","%Y/%m/%d"))
+  datos$Fecha_Arribo<-as.Date(datos$Fecha_Arribo,tryFormats = c("%d/%m/%Y","%d-%m-%Y","%Y-%m-%d","%Y/%m/%d"))
+  #Convertimos las variables Hora_Retiro y Hora Arribo en variables de tipo tiempo.
+  datos$Hora_Retiro<-as.ITime(datos$Hora_Retiro)
+  datos$Hora_Arribo<-as.ITime(datos$Hora_Arribo)
+  
+  #Creamos dos variables que contienen tanto la fecha como la hora de retiro (arribo).
+  #datos$THRet<- as.POSIXct(paste(datos$Fecha_Retiro,datos$Hora_Retiro),tryFormats=c("%Y-%m-%d %H:%M:%OS"))
+  #datos$THArr<- as.POSIXct(paste(datos$Fecha_Arribo,datos$Hora_Arribo),tryFormats=c("%Y-%m-%d %H:%M:%OS"))
+  
+  
+  # datos<-datos[-which(year(datos$Fecha_Retiro)<2018),]
+  
+  datos$Intarribo<-apply(as.data.frame(datos[,9]), 1, comparar)
+  datos$Intretiro<-apply(as.data.frame(datos[,6]), 1, comparar)
+  
+  dicf<-unique(datos$Fecha_Retiro)
+  
+  #setwd("D:/proyecto_ecobici/paper_ecobico/grafs_dens_day")
+  for(j in 1:length(dicf)){
+    #j<-8 
+    daux<-subset(datos,Fecha_Retiro==dicf[j])
+    
+    D1<-daux%>%select(Intarribo)%>%group_by(Intarribo)%>%summarise(Arrivals=n())
+    D2<-daux%>%select(Intretiro)%>%group_by(Intretiro)%>%summarise(Withdrawals=n())
+    D<-merge(D1,D2,by.x ="Intarribo" ,by.y = "Intretiro" )
+    
+    Daux<-D%>%gather(Series,Total,Arrivals,Withdrawals)  
+    
+  
+    if(is.na(Daux[1,1])==FALSE){
+      
+      p<-ggplot(data=Daux, aes(x=Intarribo,y=Total,color = Series)) + geom_line()+theme(axis.text.x = element_text(angle = 90))+scale_x_discrete(limits=as.character(dicbien),breaks=as.character(dicbien)[lim])+labs(title=paste("Aggregated arrivals and withdrawals  from ",dicf[j]),x ="Time", y = " ")
+      
+      }
+      
+    
+    if (as.character(dicf[j]) %in% c("2018-03-05","2018-07-18","2018-10-02")){
+      graficas[[k]]<-p
+      k<-k+1
+    print(k)
+      }
+    
+    print(j)
+
+  
+  }
+  rm(D1)
+  rm(D2)
+  rm(D)
+  rm(Daux)
+  rm(daux)
+  rm(datos)  
+  
+  print(i)
+  
+}
+
+grid.arrange( graficas[[1]],graficas[[2]],graficas[[3]],nrow = 3,ncol=1)
+
