@@ -1,0 +1,62 @@
+library(data.table)
+library(tidyverse)
+library(gridExtra)
+
+#Set work directory
+setwd("D:/proyecto_ecobici/ecobici/datos")
+
+
+#Files to read
+archivos<-c("2018-01.csv","2018-02.csv","2018-03.csv","2018-04.csv","2018-05.csv","2018-06.csv","2018-07.csv","2018-08.csv"
+            ,"2018-09.csv","2018-10.csv","2018-11.csv","2018-12.csv")
+
+dichrs<-as.ITime(seq(60*60*5+150,1470*60+150,by=300))
+dicbien<-as.ITime(seq(60*60*5,1470*60,by=300))
+lim<-seq(1,length(dicbien),by=12)
+meses<-c("Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre")
+
+#Function to clasify by time interval
+comparar<-function(x){
+  which.min(abs(x-dichrs))
+}
+
+#Repositories
+Arribo<-list()
+Retiro<-list()
+Total<-list()
+graficas<-list()
+
+for(i in 1:length(archivos)){
+  datos<-read.csv(archivos[i],header=TRUE,stringsAsFactors = FALSE)
+  datos$Fecha_Retiro<-as.Date(datos$Fecha_Retiro,tryFormats = c("%d/%m/%Y","%d-%m-%Y","%Y-%m-%d","%Y/%m/%d"))
+  datos$Fecha_Arribo<-as.Date(datos$Fecha_Arribo,tryFormats = c("%d/%m/%Y","%d-%m-%Y","%Y-%m-%d","%Y/%m/%d"))
+  datos$Hora_Retiro<-as.ITime(datos$Hora_Retiro)
+  datos$Hora_Arribo<-as.ITime(datos$Hora_Arribo)
+  datos$Intarribo<-apply(as.data.frame(datos[,9]), 1, comparar)
+  datos$Intretiro<-apply(as.data.frame(datos[,6]), 1, comparar)
+  D1<-datos%>%select(Intarribo)%>%group_by(Intarribo)%>%summarise(Arrivals=n())
+  D2<-datos%>%select(Intretiro)%>%group_by(Intretiro)%>%summarise(Withdrawals=n())
+  D<-merge(D1,D2,by.x ="Intarribo" ,by.y = "Intretiro" )
+  Daux<-D%>%gather(Serie,Total,Arrivals,Withdrawals)
+  
+  
+  p<-ggplot(data=Daux, aes(x=Intarribo,y=Total,color = Serie)) + geom_line()+theme(axis.text.x = element_text(angle = 90))+scale_x_discrete(limits=as.character(dicbien),breaks=as.character(dicbien)[lim])+labs(title=paste("Aggregated arrivals and withdrawals from 2018-",i),x ="Time", y = " ")
+  
+  Arribo[[i]]<-D1
+  Retiro[[i]]<-D2
+  Total[[i]]<-D
+  graficas[[i]]<-p
+  
+  rm(D1)
+  rm(D2)
+  rm(D)
+  rm(p)
+  rm(Daux)
+  rm(datos)
+  print(i)
+}
+
+#################
+#################
+#You can change the month figures by changing the graficas[[*]] value.
+grid.arrange(graficas[[1]],graficas[[5]],graficas[[9]] ,nrow = 3,ncol=1)
